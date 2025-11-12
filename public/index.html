@@ -4,9 +4,139 @@
     <link rel="stylesheet" href="default.css">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
     <script src="client.js"></script>
+    <style>
+      /* History panel styles */
+      #history {
+        position: fixed;
+        right: 0;
+        top: 0;
+        height: 100%;
+        width: 280px;
+        background: #f7f7f7;
+        border-left: 2px solid #ccc;
+        box-shadow: -2px 0 8px rgba(0,0,0,0.1);
+        transform: translateX(100%);
+        transition: transform 0.3s ease;
+        z-index: 2000;
+        padding: 16px;
+        overflow-y: auto;
+      }
+      #history.open { transform: translateX(0); }
+      #history h3 { 
+        margin: 0 0 12px 0; 
+        font-size: 18px; 
+        color: #333;
+        border-bottom: 2px solid #ddd;
+        padding-bottom: 8px;
+      }
+      #history-list { 
+        list-style: none; 
+        padding: 0; 
+        margin: 0; 
+        font-family: 'Courier New', monospace; 
+      }
+      #history-list li { 
+        padding: 8px; 
+        margin: 4px 0;
+        background: white;
+        border-radius: 4px;
+        border-left: 3px solid #4CAF50;
+        font-size: 13px; 
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      }
+
+      /* Top controls */
+      .top-controls {
+        display: flex;
+        gap: 10px;
+        justify-content: flex-end;
+        align-items: center;
+        margin-bottom: 12px;
+        padding: 8px;
+      }
+      .control-btn {
+        background: #4CAF50;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: background 0.2s;
+      }
+      .control-btn:hover {
+        background: #45a049;
+      }
+      .control-btn.secondary {
+        background: #f44336;
+      }
+      .control-btn.secondary:hover {
+        background: #da190b;
+      }
+
+      /* Dark mode styles */
+      body.dark {
+        background: #1a1a1a;
+        color: #e6e6e6;
+      }
+      body.dark .container {
+        background: transparent;
+      }
+      body.dark #history { 
+        background: #2a2a2a; 
+        color: #ddd; 
+        border-left-color: #444; 
+      }
+      body.dark #history h3 { 
+        color: #fff;
+        border-bottom-color: #444;
+      }
+      body.dark #history-list li { 
+        background: #333;
+        border-left-color: #66bb6a;
+        color: #fff;
+      }
+      body.dark .control-btn { 
+        background: #555; 
+        color: #fff; 
+      }
+      body.dark .control-btn:hover { 
+        background: #666; 
+      }
+      body.dark .control-btn.secondary {
+        background: #c62828;
+      }
+      body.dark .control-btn.secondary:hover {
+        background: #b71c1c;
+      }
+      
+      /* Theme toggle */
+      .theme-toggle {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 14px;
+        cursor: pointer;
+      }
+      .theme-toggle input[type="checkbox"] {
+        cursor: pointer;
+        width: 18px;
+        height: 18px;
+      }
+    </style>
   </head>
   <body onLoad="setValue(0)">
     <div class="container">
+      <!-- Top controls for new features -->
+      <div class="top-controls">
+        <button class="control-btn" onclick="toggleHistory()">📜 History</button>
+        <button class="control-btn secondary" onclick="clearHistory()">🗑️ Clear</button>
+        <label class="theme-toggle">
+          <input type="checkbox" id="dark-mode-toggle" onchange="toggleTheme(this.checked)">
+          <span>🌙 Dark Mode</span>
+        </label>
+      </div>
+
       <div id="results">
         <div id="result"><span class="digit0">0</span></div>
       </div>
@@ -45,5 +175,83 @@
         </div>
       </div>
     </div>
+
+    <!-- History panel -->
+    <aside id="history" aria-hidden="true">
+      <h3>History</h3>
+      <ul id="history-list"></ul>
+    </aside>
+
+    <!-- Enhancement script: history tracking and theme toggle -->
+    <script>
+      // History storage
+      const calcHistory = JSON.parse(localStorage.getItem('calcHistory') || '[]');
+      
+      function toggleHistory() {
+        const el = document.getElementById('history');
+        const open = el.classList.toggle('open');
+        el.setAttribute('aria-hidden', !open);
+      }
+
+      function clearHistory() {
+        calcHistory.length = 0;
+        localStorage.setItem('calcHistory', '[]');
+        renderHistory();
+      }
+
+      function renderHistory() {
+        const list = document.getElementById('history-list');
+        list.innerHTML = '';
+        for (let i = calcHistory.length - 1; i >= 0; i--) {
+          const li = document.createElement('li');
+          li.textContent = calcHistory[i];
+          list.appendChild(li);
+        }
+      }
+
+      function toggleTheme(enabled) {
+        if (enabled) {
+          document.body.classList.add('dark');
+          localStorage.setItem('darkMode', 'true');
+        } else {
+          document.body.classList.remove('dark');
+          localStorage.setItem('darkMode', 'false');
+        }
+      }
+
+      // Restore theme preference
+      if (localStorage.getItem('darkMode') === 'true') {
+        document.body.classList.add('dark');
+        document.getElementById('dark-mode-toggle').checked = true;
+      }
+
+      // Wrap equalPressed to record results
+      (function(){
+        const originalEqual = window.equalPressed;
+        window.equalPressed = function() {
+          if (typeof originalEqual === 'function') originalEqual();
+          
+          // Read the displayed result
+          setTimeout(() => {
+            const displayEl = document.querySelector('#result .digit0') || document.querySelector('#result');
+            const value = displayEl ? displayEl.textContent.trim() : '';
+            if (value !== '' && value !== '0') {
+              const timestamp = new Date().toLocaleTimeString();
+              const entry = `${value} (${timestamp})`;
+              calcHistory.push(entry);
+              
+              // Keep only last 50 entries
+              if (calcHistory.length > 50) calcHistory.shift();
+              
+              localStorage.setItem('calcHistory', JSON.stringify(calcHistory));
+              renderHistory();
+            }
+          }, 100);
+        };
+      })();
+
+      // Initial render
+      renderHistory();
+    </script>
   </body>
 </html>
