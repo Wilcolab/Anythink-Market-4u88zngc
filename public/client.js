@@ -33,6 +33,15 @@ function calculate(operand1, operand2, operation) {
         case '/':
             uri += "?operation=divide";
             break;
+        case '^':
+            // Exponentiation: handle client-side (server does not implement power operation)
+            try {
+                var powResult = Math.pow(Number(operand1), Number(operand2));
+                setValue(powResult);
+            } catch (e) {
+                setError();
+            }
+            return;
         default:
             setError();
             return;
@@ -138,7 +147,7 @@ document.addEventListener('keypress', (event) => {
         numberPressed(event.key);
     } else if (event.key == '.') {
         decimalPressed();
-    } else if (event.key.match(/^[-*+/]$/)) {
+    } else if (event.key.match(/^[-*+\/^]$/)) {
         operationPressed(event.key);
     } else if (event.key == '=') {
         equalPressed();
