@@ -141,6 +141,18 @@ function equalPressed() {
     calculate(operand1, operand2, operation);
 }
 
+// TODO: Add square root function
+function squareRootPressed() {
+    var currentValue = getValue();
+    if (currentValue < 0) {
+        setError();
+        return;
+    }
+    var result = Math.sqrt(Number(currentValue));
+    setValue(result);
+    state = states.complete;
+}
+
 // TODO: Add key press logics
 document.addEventListener('keypress', (event) => {
     if (event.key.match(/^\d+$/)) {
